@@ -1,9 +1,10 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import pandas as pd
 import joblib
 import numpy as np
 import os
 import csv
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -134,6 +135,52 @@ def submit():
         return render_template('index.html', submission_success=True)
 
     return render_template('index.html')
+
+@app.route('/submit_athlete_data', methods=['POST'])
+def submit_athlete_data():
+    """
+    Handle submission of athlete data from the new submit form.
+    """
+    try:
+        # Collect all form data
+        athlete_data = {
+            'Name': request.form.get('athlete_name', ''),
+            'Age': request.form.get('athlete_age', ''),
+            'Gender': request.form.get('athlete_gender', ''),
+            'Sport': request.form.get('athlete_sport', ''),
+            'Injury Duration (weeks)': request.form.get('injury_duration_weeks', ''),
+            'Injury Occurred (weeks ago)': request.form.get('injury_occurred_weeks', ''),
+            'Trunk Flexion (cm)': request.form.get('trunk_flexion_cm', ''),
+            'BMI': request.form.get('athlete_bmi', ''),
+            'Weekly Training Hours': request.form.get('weekly_training_hours', ''),
+            'Current discomfort / Injury': request.form.get('current_discomfort', ''),
+            'Shoulder Flexion (deg)': request.form.get('shoulder_flexion_deg', ''),
+            'Weight (kg)': request.form.get('athlete_weight', ''),
+            'Position': request.form.get('position', ''),
+            'Submission Date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # Validate required fields
+        required_fields = ['Name', 'Age', 'Gender', 'Sport']
+        for field in required_fields:
+            if not athlete_data[field]:
+                return jsonify({'success': False, 'error': f'{field} is required'})
+        
+        # Save to CSV file
+        file_path = os.path.join('data', 'athlete_submissions.csv')
+        file_exists = os.path.isfile(file_path)
+        
+        with open(file_path, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                # Write headers if file doesn't exist
+                writer.writerow(athlete_data.keys())
+            writer.writerow(athlete_data.values())
+        
+        return jsonify({'success': True, 'message': 'Athlete data submitted successfully'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 
 if __name__ == '__main__':

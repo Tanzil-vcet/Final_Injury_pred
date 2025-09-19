@@ -401,7 +401,7 @@
                 </div>
             </div>
 
-            <button type="button" class="collapsible btn btn-secondary mb-3">Show Default Values Used in Prediction</button>
+            <button type="button" class="collapsible btn btn-outline-primary mb-3" style="border-width: 2px; font-weight: 500;">Show Default Values Used in Prediction</button>
             <div class="content">
                 <div class="card mb-3">
                     <div class="card-header">Default Values (Used when fields are left empty)</div>
@@ -440,6 +440,101 @@
 
             <button type="submit" class="btn btn-primary">Predict Risk</button>
         </form>
+
+        <!-- Submit Athlete Data Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Submit Athlete Data</h4>
+            </div>
+            <div class="card-body">
+                <form id="submit-form" class="row g-3">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="athlete_name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="athlete_name" name="athlete_name" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="athlete_age" class="form-label">Age</label>
+                            <input type="number" class="form-control" id="athlete_age" name="athlete_age" required min="12" max="18">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="athlete_gender" class="form-label">Gender</label>
+                            <select class="form-control" id="athlete_gender" name="athlete_gender" required>
+                                <option value="Male" selected>Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="athlete_sport" class="form-label">Sport</label>
+                            <input type="text" class="form-control" id="athlete_sport" name="athlete_sport" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="injury_duration_weeks" class="form-label">Injury Duration (weeks)</label>
+                            <input type="number" class="form-control" id="injury_duration_weeks" name="injury_duration_weeks" min="0" step="1">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="injury_occurred_weeks" class="form-label">Injury Occurred (weeks ago)</label>
+                            <input type="number" class="form-control" id="injury_occurred_weeks" name="injury_occurred_weeks" min="0" step="1">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="trunk_flexion_cm" class="form-label">Trunk Flexion (cm)</label>
+                            <input type="number" class="form-control" id="trunk_flexion_cm" name="trunk_flexion_cm" min="-4.9" max="15" step="0.1">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="athlete_bmi" class="form-label">BMI</label>
+                            <input type="number" class="form-control" id="athlete_bmi" name="athlete_bmi" min="10" max="50" step="0.1">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="weekly_training_hours" class="form-label">Weekly Training Hours</label>
+                            <input type="number" class="form-control" id="weekly_training_hours" name="weekly_training_hours" min="0" max="20" step="0.5">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="current_discomfort" class="form-label">Current discomfort / Injury</label>
+                            <input type="text" class="form-control" id="current_discomfort" name="current_discomfort">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="shoulder_flexion_deg" class="form-label">Shoulder Flexion (deg)</label>
+                            <input type="number" class="form-control" id="shoulder_flexion_deg" name="shoulder_flexion_deg" min="165" max="195" step="1">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="athlete_weight" class="form-label">Weight (kg)</label>
+                            <input type="number" class="form-control" id="athlete_weight" name="athlete_weight" min="30" max="100" step="0.1">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="position" class="form-label">Injury Position</label>
+                            <input type="text" class="form-control" id="position" name="position">
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-success btn-lg">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <div id="results" style="display: none;">
             <h3>Prediction Results</h3>
@@ -517,6 +612,30 @@
                 }
             });
         }
+
+        // Handle submit form submission
+        document.getElementById('submit-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            try {
+                const response = await fetch('/submit_athlete_data', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Athlete data submitted successfully!');
+                    this.reset(); // Clear the form
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
     </script>
 </body>
 </html>
