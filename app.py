@@ -25,64 +25,75 @@ def home():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if request.method == 'POST':
-        # --- Collect all form data ---
-        form_data = {
-            'Age': int(request.form['age']),
-            'Gender': request.form['gender'],
-            'Sport': request.form['sport'],
-            'Weekly Training Hours': int(request.form['training_hours']),
-            'Years of Experience': int(request.form['experience']),
-            'Previous Injuries Count': int(request.form['previous_injuries']),
-            'Average Warm-up Time': int(request.form['warmup_time']),
-            'Rest Days per Week': int(request.form['rest_days'])
+    try:
+        # This correctly reads all form fields from your index.html
+        form_data = request.form.to_dict()
+
+        # Convert fields to numbers and use default values for any empty optional fields
+        numeric_features = {
+            'Age': float(form_data.get('Age', 0)),
+            'Weight (kg)': float(form_data.get('Weight (kg)', 0)),
+            'Height (m)': float(form_data.get('Height (m)', 0)),
+            'BMI': float(form_data.get('BMI', 0)),
+            'Waist Circumference (cm)': float(form_data.get('Waist Circumference (cm)', 66.45)),
+            'Hip Circumference (cm)': float(form_data.get('Hip Circumference (cm)', 82.88)),
+            'Quad Circumference (cm)': float(form_data.get('Quad Circumference (cm)', 51.52)),
+            'Calf Circumference (cm)': float(form_data.get('Calf Circumference (cm)', 32.81)),
+            'Upper Arm Circumference (cm)': float(form_data.get('Upper Arm Circumference (cm)', 26.92)),
+            'Wrist Circumference (cm)': float(form_data.get('Wrist Circumference (cm)', 15.91)),
+            'Ankle Circumference (cm)': float(form_data.get('Ankle Circumference (cm)', 18.58)),
+            'Shoulder Flexion (deg)': float(form_data.get('Shoulder Flexion (deg)', 180.30)),
+            'Trunk Flexion (cm)': float(form_data.get('Trunk Flexion (cm)', 5.00)),
+            'Stick Test (cm)': float(form_data.get('Stick Test (cm)', 24.99)),
+            'Strength Score': float(form_data.get('Strength Score', 3.06)),
+            'Endurance Score': float(form_data.get('Endurance Score', 3.10)),
+            'Training hrs': float(form_data.get('Training hrs', 0)),
+            'Experience': float(form_data.get('Experience', 0)),
+            'Duration': float(form_data.get('Duration', 0)),
+            'Injury Occurred (weeks ago)': float(form_data.get('Injury Occurred (weeks ago)', 9.09)),
+            'discomfort': float(form_data.get('discomfort', 0)),
+            'Gym Safety': float(form_data.get('Gym Safety', 0))
         }
 
-        # --- Create a DataFrame for prediction ---
-        # The order of columns must match the training data
-        feature_columns = [
-            'Age', 'Gender', 'Sport', 'Weekly Training Hours',
-            'Years of Experience', 'Previous Injuries Count',
-            'Average Warm-up Time', 'Rest Days per Week'
+        # Add the gender field
+        numeric_features['Gender'] = form_data.get('Gender', 'Male')
+
+        # Create a DataFrame in the exact order your model was trained on
+        feature_order = [
+            'Age', 'Gender', 'Weight (kg)', 'Height (m)', 'BMI',
+            'Waist Circumference (cm)', 'Hip Circumference (cm)',
+            'Quad Circumference (cm)', 'Calf Circumference (cm)',
+            'Upper Arm Circumference (cm)', 'Wrist Circumference (cm)',
+            'Ankle Circumference (cm)', 'Shoulder Flexion (deg)',
+            'Trunk Flexion (cm)', 'Stick Test (cm)', 'Strength Score',
+            'Endurance Score', 'Training hrs', 'Experience', 'Duration',
+            'Injury Occurred (weeks ago)', 'discomfort', 'Gym Safety'
         ]
-        input_df = pd.DataFrame([form_data], columns=feature_columns)
-
-        # --- Preprocessing ---
-        # Convert categorical variables to numerical using one-hot encoding
-        input_df = pd.get_dummies(input_df, columns=['Gender', 'Sport'], drop_first=True)
-
-        # Align columns with the model's training columns
-        # This handles missing columns if a sport/gender wasn't in the form but was in training
-        # We'll create a dummy training columns list for this example
-        # In a real scenario, you'd save this from your training script
-        # NOTE: This is a simplified list. Ensure it matches your actual model's features.
-        training_cols = ['Age', 'Weekly Training Hours', 'Years of Experience',
-                         'Previous Injuries Count', 'Average Warm-up Time', 'Rest Days per Week',
-                         'Gender_Male', 'Sport_Basketball', 'Sport_Football',
-                         'Sport_Running', 'Sport_Soccer', 'Sport_Tennis'] # Example columns
         
-        # Reindex the input dataframe to match the training columns
-        input_df_aligned = input_df.reindex(columns=training_cols, fill_value=0)
+        input_df = pd.DataFrame([numeric_features], columns=feature_order)
 
+        # Pre-process Gender to be numerical (1 for Male, 0 for Female)
+        input_df['Gender'] = input_df['Gender'].apply(lambda x: 1 if x == 'Male' else 0)
 
-        # --- Make Predictions ---
-        severity_prediction = severity_model.predict(input_df_aligned)[0]
-        location_prediction_encoded = location_model.predict(input_df_aligned)[0]
-
-        # Decode the location prediction
+        # Make the predictions
+        severity_prediction = severity_model.predict(input_df)[0]
+        location_prediction_encoded = location_model.predict(input_df)[0]
         location_prediction = location_encoder.inverse_transform([location_prediction_encoded])[0]
 
-        # Calculate a risk score (example logic)
-        risk_score = (severity_prediction * 2.5) # Scale severity (0-4) to a 1-10 score
+        # Calculate a risk score on a 0-100 scale
+        max_severity = 4 
+        risk_score = (severity_prediction / max_severity) * 100
 
-        # --- Render results on the page ---
-        return render_template('index.html',
-                               location=location_prediction,
-                               severity=int(severity_prediction),
-                               risk=round(risk_score, 1),
-                               form_data=form_data) # Pass original data back to the form
+        # This returns the result in the JSON format the frontend expects
+        return jsonify({
+            'risk_score': round(risk_score, 2),
+            'severity': str(int(severity_prediction)),
+            'location': location_prediction
+        })
 
-    return render_template('index.html')
+    except Exception as e:
+        # If any error happens, send it back as JSON
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/submit', methods=['POST'])
 def submit():
