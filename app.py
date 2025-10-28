@@ -30,6 +30,7 @@ def predict():
         form_data = request.form.to_dict()
 
         # Convert fields to numbers and use default values for any empty optional fields
+        # IMPORTANT: Keys MUST match the model's training feature names
         numeric_features = {
             'Age': float(form_data.get('Age', 0)),
             'Weight (kg)': float(form_data.get('Weight (kg)', 0)),
@@ -47,18 +48,26 @@ def predict():
             'Stick Test (cm)': float(form_data.get('Stick Test (cm)', 24.99)),
             'Strength Score': float(form_data.get('Strength Score', 3.06)),
             'Endurance Score': float(form_data.get('Endurance Score', 3.10)),
-            'Training hrs': float(form_data.get('Training hrs', 0)),
-            'Experience': float(form_data.get('Experience', 0)),
-            'Duration': float(form_data.get('Duration', 0)),
+            # Map form fields to TRAINING FEATURE NAMES
+            'Weekly Training Hours': float(form_data.get('Training hrs', form_data.get('Weekly Training Hours', 0))),
+            'Years Experience': float(form_data.get('Experience', form_data.get('Years Experience', 0))),
+            'Injury Duration (weeks)': float(form_data.get('Duration', form_data.get('Injury Duration (weeks)', 0))),
             'Injury Occurred (weeks ago)': float(form_data.get('Injury Occurred (weeks ago)', 9.09)),
-            'discomfort': float(form_data.get('discomfort', 0)),
-            'Gym Safety': float(form_data.get('Gym Safety', 0))
+            'current discomfort / Injury': float(form_data.get('discomfort', form_data.get('current discomfort / Injury', 0))),
+            'Gym Safety': float(form_data.get('Gym Safety', 0)),
+            # Add missing features expected by the model
+            'Unnamed: 23': 0,
+            'Coach': 1,
+            'Coach exp': 5,
+            'Coach certification': 1,
+            'coaches success %': 75
         }
 
         # Add the gender field
         numeric_features['Gender'] = form_data.get('Gender', 'Male')
 
         # Create a DataFrame in the exact order your model was trained on
+        # From feature_names_in_ of the trained models
         feature_order = [
             'Age', 'Gender', 'Weight (kg)', 'Height (m)', 'BMI',
             'Waist Circumference (cm)', 'Hip Circumference (cm)',
@@ -66,8 +75,10 @@ def predict():
             'Upper Arm Circumference (cm)', 'Wrist Circumference (cm)',
             'Ankle Circumference (cm)', 'Shoulder Flexion (deg)',
             'Trunk Flexion (cm)', 'Stick Test (cm)', 'Strength Score',
-            'Endurance Score', 'Training hrs', 'Experience', 'Duration',
-            'Injury Occurred (weeks ago)', 'discomfort', 'Gym Safety'
+            'Endurance Score', 'Weekly Training Hours', 'Years Experience',
+            'Injury Duration (weeks)', 'Injury Occurred (weeks ago)',
+            'Unnamed: 23', 'Coach', 'Gym Safety', 'Coach exp',
+            'Coach certification', 'coaches success %', 'current discomfort / Injury'
         ]
         
         input_df = pd.DataFrame([numeric_features], columns=feature_order)
